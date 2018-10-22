@@ -1,12 +1,12 @@
 /* global google */
 
 import React from 'react';
-import { compose, withProps, lifecycle } from 'recompose';
+import { compose, withProps, lifecycle, withHandlers } from 'recompose';
 import { GoogleMap, withGoogleMap, withScriptjs, Marker, DirectionsRenderer } from "react-google-maps";
-import {connect} from 'react-redux';
+import { connect } from 'react-redux';
 
 const mapReduxStateToProps = (reduxState) => {
-   return { reduxState };
+    return { reduxState };
 }
 
 const MapComponent = compose(
@@ -16,15 +16,26 @@ const MapComponent = compose(
         containerElement: <div style={{ height: `400px` }} />,
         mapElement: <div style={{ height: `100%` }} />,
         location: { lat: 44.983333, lng: -93.266667 },
-    }), withScriptjs,
+    }),
+    withHandlers({
+        onMarkerClick: (playground, index) => () => {
+            console.log('You clicked on:', playground.reduxState.playgrounds);
+            // console.log('Which is at:', playground.location);
+        }
+    }),
+    withScriptjs,
     withGoogleMap,
     // Marker,
     lifecycle({
-        componentDidMount() {
+        componentWillReceiveProps(nextProps) {
+            if(nextProps.submitted === this.props.submitted){
+                this.setState({submitted: nextProps.submitted});
+                return null;
+            }
             const DirectionsService = new google.maps.DirectionsService();
             DirectionsService.route({
-                origin: { lat: 44.983333, lng: -93.266667 },
-                destination: { lat: 41.590833, lng: -93.620833 },
+                origin: this.props.reduxState.route[this.props.reduxState.route.length-1].origin,
+                destination: this.props.reduxState.route[this.props.reduxState.route.length-1].destination,
                 travelMode: google.maps.TravelMode.DRIVING
             }, (result, status) => {
                 if (status === google.maps.DirectionsStatus.OK) {
@@ -48,14 +59,14 @@ const MapComponent = compose(
                         return Math.sqrt(a * a + b * b) * 6371000;
                     }
                     let toRadians = (degrees) => {
-                        return degrees*Math.PI/180;
+                        return degrees * Math.PI / 180;
                     }
                     //to access the latLngs, we set state as such:
                     this.setState({ polyline: polyline.latLngs.b[0].b });
                     //and now state.polyline gives us an array of latLng objects along the route
 
                     //we initialize our checkpoints with the first latLng from polyline
-                    let lastSearch = {lat: polyline.latLngs.b[0].b[0].lat(), lng: polyline.latLngs.b[0].b[0].lng() };
+                    let lastSearch = { lat: polyline.latLngs.b[0].b[0].lat(), lng: polyline.latLngs.b[0].b[0].lng() };
                     let distanceTraveledMeters = 0;
                     let searchAt = [];
                     let stepBeginning;
@@ -66,37 +77,49 @@ const MapComponent = compose(
                         let segmentDistance = pythagorean(toRadians(stepEnd.lat) - toRadians(stepBeginning.lat), toRadians(stepEnd.lng) - toRadians(stepBeginning.lng));
                         distanceTraveledMeters = distanceTraveledMeters + segmentDistance;
                         // distanceTraveledArrayMeters.push(distanceTraveledMeters);
-                        if (pythagorean(toRadians(stepEnd.lat) - toRadians(lastSearch.lat), toRadians(stepEnd.lng) - toRadians(lastSearch.lng)) > 20000) {
+                        if (pythagorean(toRadians(stepEnd.lat) - toRadians(lastSearch.lat), toRadians(stepEnd.lng) - toRadians(lastSearch.lng)) > 80000) {
                             lastSearch = stepEnd;
                             searchAt.push(lastSearch);
+                            this.props.dispatch({ type: 'SEARCH_PLAYGROUNDS', payload: lastSearch });
                         }
                     }
                     console.log('We search at:', searchAt);
-                    console.log('polyline.latLngs.b[0].b',polyline.latLngs.b[0].b);
-                    this.setState({checkpoints: searchAt});
-                    this.props.dispatch({type: 'SET_CHECKPOINTS', payload: searchAt});
+                    console.log('polyline.latLngs.b[0].b', polyline.latLngs.b[0].b);
+                    this.setState({ checkpoints: searchAt });
+                    this.props.dispatch({ type: 'SET_CHECKPOINTS', payload: searchAt });
                     // searchAt.map((item,index) => <Marker key={index} position={item} />);
                     // this.setState({markers: searchAt});
                 } else {
                     console.error(`error fetching directions ${result}`);
                 }
             });
-        }
+        }//end componentDidMount
     }) //end lifecycle
 )//end compose
-    ((props) => (<GoogleMap
-        defaultZoom={8}
-        defaultCenter={props.location}
-    >
-        {props.directions && <DirectionsRenderer directions={props.directions} />}
-        {props.reduxState.checkpoints.map((checkpoint, index) => (
-            <Marker key={index} position={ checkpoint }/>)
-        )}
-        {/* these lines are giving me a 'Cannot call a class as a function' error */}
-        {/* {props.markers} */}
-        {/* <Marker position={props.reduxState.checkpoints[7]} /> */}
-        {JSON.stringify(props.reduxState)}
-    </GoogleMap>
+    ((props) => (
+        <div>
+            <p>Origin: {props.reduxState.origin}, Destination: {props.reduxState.destination}</p>
+            <GoogleMap
+                defaultZoom={8}
+                defaultCenter={props.location}
+            >
+                {props.directions && <DirectionsRenderer directions={props.directions} />}
+                {props.reduxState.checkpoints.map((checkpoint, index) => (
+                    <Marker key={index} position={checkpoint} label='Search' />)
+                )}
+                {/* {props.reduxState.playgrounds.map(playgroundArray => {
+            playgroundArray.map((playground,index) => 
+            <Marker key={index} position={playground.location} /> )}
+        )} */}
+                {props.reduxState.playgrounds.map((playground, index) =>
+                    <Marker key={index} position={playground.location} title={playground.name} onClick={() => props.onMarkerClick(playground, index)} />)}
+
+                {/* (playgroundArray,index) => (
+            <Marker key={index} position={playgroundArray[0].location} onClick={()=>props.onMarkerClick(playgroundArray)} />
+        ))} */}
+                {JSON.stringify(props.reduxState, null, 2)}
+            </GoogleMap>
+        </div>
     ))
 
 export default connect(mapReduxStateToProps)(MapComponent);
