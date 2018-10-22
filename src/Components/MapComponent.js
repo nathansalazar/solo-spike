@@ -76,19 +76,15 @@ const MapComponent = compose(
                         stepEnd = { lat: step.lat(), lng: step.lng() };
                         let segmentDistance = pythagorean(toRadians(stepEnd.lat) - toRadians(stepBeginning.lat), toRadians(stepEnd.lng) - toRadians(stepBeginning.lng));
                         distanceTraveledMeters = distanceTraveledMeters + segmentDistance;
-                        // distanceTraveledArrayMeters.push(distanceTraveledMeters);
-                        if (pythagorean(toRadians(stepEnd.lat) - toRadians(lastSearch.lat), toRadians(stepEnd.lng) - toRadians(lastSearch.lng)) > 80000) {
+                        if (pythagorean(toRadians(stepEnd.lat) - toRadians(lastSearch.lat), toRadians(stepEnd.lng) - toRadians(lastSearch.lng)) > this.props.reduxState.route[this.props.reduxState.route.length-1].radius*2) {
                             lastSearch = stepEnd;
                             searchAt.push(lastSearch);
-                            this.props.dispatch({ type: 'SEARCH_PLAYGROUNDS', payload: lastSearch });
+                            this.props.dispatch({ type: 'SEARCH_PLAYGROUNDS', payload: lastSearch, radius: this.props.reduxState.route[this.props.reduxState.route.length-1].radius });
                         }
                     }
                     console.log('We search at:', searchAt);
                     console.log('polyline.latLngs.b[0].b', polyline.latLngs.b[0].b);
-                    this.setState({ checkpoints: searchAt });
                     this.props.dispatch({ type: 'SET_CHECKPOINTS', payload: searchAt });
-                    // searchAt.map((item,index) => <Marker key={index} position={item} />);
-                    // this.setState({markers: searchAt});
                 } else {
                     console.error(`error fetching directions ${result}`);
                 }
@@ -104,13 +100,9 @@ const MapComponent = compose(
                 defaultCenter={props.location}
             >
                 {props.directions && <DirectionsRenderer directions={props.directions} />}
-                {props.reduxState.checkpoints.map((checkpoint, index) => (
-                    <Marker key={index} position={checkpoint} label='Search' />)
+                {props.reduxState.checkpoints.map((checkpoint, index) =>
+                        <Marker key={index} position={checkpoint} title={JSON.stringify(checkpoint)} label='Search' /> 
                 )}
-                {/* {props.reduxState.playgrounds.map(playgroundArray => {
-            playgroundArray.map((playground,index) => 
-            <Marker key={index} position={playground.location} /> )}
-        )} */}
                 {props.reduxState.playgrounds.map((playground, index) =>
                     <Marker key={index} position={playground.location} title={playground.name} onClick={() => props.onMarkerClick(playground, index)} />)}
 

@@ -22,6 +22,7 @@ class App extends Component {
 
   handleSubmit = (event) => {
     event.preventDefault();
+    this.props.dispatch({type: 'CLEAR_PLAYGROUNDS'});
     console.log('State:',this.state);
     this.setState({submitted: !this.state.submitted });
     this.props.dispatch({type: 'SET_ROUTE', payload: this.state});
