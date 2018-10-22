@@ -68,8 +68,8 @@ const MapComponent = compose(
                     //we initialize our checkpoints with the first latLng from polyline
                     let lastSearch = { lat: polyline.latLngs.b[0].b[0].lat(), lng: polyline.latLngs.b[0].b[0].lng() };
                     let distanceTraveledMeters = 0;
-                    let searchAt = [];
-                    let stepBeginning;
+                    let searchAt = []; //an array of coordinates at which to search
+                    let stepBeginning; //we keep track of each beginning/end of each step of the trip
                     let stepEnd = lastSearch;
                     for (let step of polyline.latLngs.b[0].b) {
                         stepBeginning = stepEnd;
